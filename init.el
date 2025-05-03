@@ -60,4 +60,26 @@
 (load-user-file "keybindings.el")
 (load-user-file "gpt.el")
 
+(defun my-magit/delete-merged-branches ()
+  (interactive)
+  (magit-fetch-all-prune)
+  (let* ((default-branch
+           (read-string "Default branch: " (magit-get-current-branch)))
+         (merged-branches
+          (magit-git-lines "branch"
+                           "--format" "%(refname:short)"
+                           "--merged"
+                           default-branch))
+         (branches-to-delete
+          (remove default-branch merged-branches)))
+    (if branches-to-delete
+        (if (yes-or-no-p (concat "Delete branches? ["
+                                 (mapconcat 'identity branches-to-delete ", ") "]"))
+            (magit-branch-delete branches-to-delete))
+      (message "Nothing to delete"))))
+
+(transient-append-suffix 'magit-branch "C"
+    '("K" "delete all merged" my-magit/delete-merged-branches))
+
+
 (provide 'init)
