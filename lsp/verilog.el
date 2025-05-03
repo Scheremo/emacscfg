@@ -39,23 +39,29 @@
 
 (defun bender-get-top-level-project-root ()
   "Determine the top-level project root for the current buffer.
-If the path contains `.bender` and the current buffer's file is within its hierarchy,
-the top-level is the parent directory of `.bender`.
-Otherwise, use the output of `git rev-parse --show-toplevel`."
-  (let* ((buffer-dir (or (buffer-file-name) default-directory))
-         (bender-dir (expand-file-name ".bender" (locate-dominating-file buffer-dir ".bender"))))
-
-    (message "bender-dir: %s" bender-dir)
-    (message "in path? %s" (file-exists-p bender-dir))
-
-    (if (and bender-dir
-             (file-exists-p bender-dir))
-        (file-name-directory (directory-file-name bender-dir)) ;; Parent directory of `.bender`
-      (let ((git-top-level (string-trim
-                            (shell-command-to-string "git rev-parse --show-toplevel"))))
-        (if (string-empty-p git-top-level)
-            (user-error "No Git repository found for the current buffer")
-          git-top-level)))))
+If there’s a `.bender` directory above the buffer’s file, return its parent.
+Otherwise, run `git rev-parse --show-toplevel` — and if the buffer is
+remote (via TRAMP), reattach the remote prefix to the Git root path."
+  (let* ((buffer-dir    (or (buffer-file-name) default-directory))
+         ;; locate the .bender directory if any
+         (bender-dir    (when-let ((dom (locate-dominating-file buffer-dir ".bender")))
+                          (expand-file-name ".bender" dom)))
+         ;; detect a TRAMP prefix (e.g. "/ssh:user@host:")
+         (remote-prefix (file-remote-p buffer-dir)))
+    (if (and bender-dir (file-exists-p bender-dir))
+        ;; parent of .bender
+        (file-name-directory (directory-file-name bender-dir))
+      (let ((git-root-local
+             (string-trim
+              (shell-command-to-string "git rev-parse --show-toplevel"))))
+        (cond
+         ((string-empty-p git-root-local)
+          (user-error "No Git repository found for the current buffer"))
+         (remote-prefix
+          ;; reattach "/ssh:user@host:" to "/path/to/project"
+          (concat remote-prefix git-root-local))
+         (t
+          git-root-local))))))
 
 (defun bender-generate-file-list (file-path)
   "Generate the file list at FILE-PATH using a shell command.
@@ -102,7 +108,8 @@ Generate the file list if it doesn't exist or if `Bender.yml` or `Bender.lock` h
                        bender-files))
       (message "Bender.yml or Bender.lock has changed, regenerating .verible.f...")
       (bender-generate-file-list file-path))
-    file-path))
+    file-path)
+  )
 
 (defun bender-setup-verilog-eglot ()
   "Setup `eglot` for Verilog mode dynamically."
