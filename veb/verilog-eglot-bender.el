@@ -50,15 +50,48 @@
     (add-to-list 'auto-mode-alist pair)))
 
 ;;;; Project helpers
+(defun veb--dir-as-directory (d)
+  (file-name-as-directory (expand-file-name d)))
+
+(defun veb--parent (d)
+  (file-name-directory (directory-file-name (expand-file-name d))))
+
+(defun veb--ancestor-parent-of-component (dir names)
+  "If DIR is inside a directory whose basename is in NAMES
+(e.g. DIR=/a/b/working_dir/x → names=(\"working_dir\")), return the
+parent of that component (/a/b). Otherwise nil."
+  (let* ((cur (veb--dir-as-directory dir))
+         (stop (veb--dir-as-directory "/"))
+         (res nil))
+    (while (and cur (not (string= cur stop)) (not res))
+      (let* ((base (file-name-nondirectory (directory-file-name cur))))
+        (if (member base names)
+            (setq res (veb--parent cur))
+          (setq cur (veb--parent cur)))))
+    res))
+
 (defun veb--project-root (&optional dir)
-  "Return best-effort project root for DIR (or `default-directory`)."
-  (let* ((dir (file-name-as-directory (or dir default-directory)))
+  "Return best-effort project root for DIR (or `default-directory`).
+
+Special case: if DIR is under a `working_dir/...` or `.bender/...` subtree,
+treat the parent *of that component* as the project base before searching
+for .git / project.el roots."
+  (let* ((dir (veb--dir-as-directory (or dir default-directory)))
          (_   (veb--log "Resolving project root from: %s" dir))
-         (git (locate-dominating-file dir ".git"))
-         (proj (ignore-errors (project-current nil dir)))
-         (root (or git (and proj (project-root proj)) dir)))
-    (veb--log "Project root -> %s (git=%s proj=%s)"
-              (or root "<nil>") (and git t) (and proj t))
+         ;; If we're inside .bender/... or working_dir/... jump to their parent.
+         (escape (veb--ancestor-parent-of-component
+                  dir '("working_dir" ".bender")))
+         (base   (or escape dir))
+         ;; Prefer a .git at/above BASE (this avoids subrepo roots).
+         (git    (locate-dominating-file base ".git"))
+         ;; Fall back to project.el on BASE (after escaping vendored trees).
+         (proj   (ignore-errors (project-current nil base)))
+         (root   (or git (and proj (project-root proj)) base)))
+    (veb--log "Project root -> %s (escaped=%s git=%s proj=%s)"
+              (or root "<nil>")
+              (and escape escape)
+              (and git t)
+              (and proj t))
     root))
 
 (defun veb--filelist-path (&optional root)

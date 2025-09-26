@@ -7,6 +7,15 @@
 
 (use-package verilog-ts-mode)
 
+;; Prefer verilog-ts-mode for Verilog / SystemVerilog sources
+(when (fboundp 'verilog-ts-mode)
+  ;; Remap verilog-mode to verilog-ts-mode
+  (add-to-list 'major-mode-remap-alist '(verilog-mode . verilog-ts-mode))
+
+  ;; Explicitly register extensions
+  (dolist (pattern '("\\.v\\'" "\\.sv\\'" "\\.svh\\'"))
+    (add-to-list 'auto-mode-alist (cons pattern 'verilog-ts-mode))))
+
 ;; (with-eval-after-load 'eglot
 ;;   (add-to-list 'eglot-server-programs
 ;;                `((verilog-mode)
