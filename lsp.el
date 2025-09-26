@@ -28,7 +28,8 @@
          ("C-c w" . #'xref-find-references)
          ("C-c a" . #'eglot-rename)
          ("C-c C-c" . #'eglot-code-actions)
-         ("C-c C-l" . #'eglot-format-buffer))
+         ("C-c C-l" . #'eglot-format-buffer)
+         ("C-c C-r" . #'my-eglot-camel-to-snake))
   :custom
   (eglot-confirm-server-initiated-edits nil)
   (eglot-autoshutdown t)
@@ -97,3 +98,4 @@ only if no conflicts with unsaved changes are detected."
 (load-user-file "lsp/c.el")
 (load-user-file "lsp/cmake.el")
 (load-user-file "lsp/python.el")
+(load-user-file "lsp/lisp.el")
