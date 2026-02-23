@@ -1,4 +1,28 @@
-;;; verilog-eglot-bender.el --- Verilog TS + Bender + Verible via Eglot  -*- lexical-binding: t; -*-
+;;; verilog-eglot-bender.el --- Eglot + CIRCT Verilog LSP + Bender  -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2025 Moritz Scherer
+;; Author: Moritz Scherer <moritz@mosaic-soc.com>
+;; Keywords: languages, tools, verilog, lsp
+;; Package-Requires: ((emacs "29.1"))
+;; URL: https://github.com/scheremo/verilog-eglot-bender
+;; SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+;;; Commentary:
+;;
+;; Glue for Verilog tree-sitter modes, Bender layouts, and the
+;; `circt-verilog-lsp-server` via Eglot.
+;;
+;; Example use with use-package:
+;;
+;;   (use-package verilog-eglot-bender
+;;     :hook ((verilog-ts-mode . veb/on-verilog-buffer)
+;;            (verilog-mode    . veb/on-verilog-buffer))
+;;     :custom
+;;     (veb-filelist-name ".circt-verilog.f")
+;;     (veb-lsp-executable "circt-verilog-lsp-server")
+;;     (veb-debug nil))
+;;
+;;; Code:
 
 (require 'eglot)
 (require 'project)
@@ -11,9 +35,10 @@
   :group 'tools
   :prefix "veb-")
 
-(defcustom veb-debug t
+(defcustom veb-debug nil
   "When non-nil, emit verbose debug messages to *Messages*."
-  :type 'boolean :group 'veb)
+  :type 'boolean
+  :group 'veb)
 
 (defmacro veb--log (fmt &rest args)
   "Internal logger. Uses message when veb-debug is non-nil."
@@ -37,21 +62,18 @@
   "Whether to enable any fallback behavior (placeholder knob)."
   :type 'boolean :group 'veb)
 
-;;;; Tree-sitter associations
+;;;; Tree-sitter associations --------------------------------------------------
 (when (fboundp 'verilog-ts-mode)
   (veb--log "Enabling verilog-ts-mode associations")
   ;; Prefer verilog-ts-mode
   (add-to-list 'major-mode-remap-alist '(verilog-mode . verilog-ts-mode))
-  ;; Correct regexes (no stray quotes)
+  ;; Map common extensions
   (dolist (pair '(("\\.v\\'"   . verilog-ts-mode)
                   ("\\.sv\\'"  . verilog-ts-mode)
                   ("\\.svh\\'" . verilog-ts-mode)))
-    (veb--log "auto-mode-alist add: %S" pair)
-    (add-to-list 'auto-mode-alist pair)))
+    (cl-pushnew pair auto-mode-alist :test #'equal)))
 
-;;;; Project helpers
-;; Remote-safe helpers (TRAMP-friendly)
-
+;;;; Remote-safe helpers (TRAMP-friendly) -------------------------------------
 (defun veb--dir-as-directory (d)
   (file-name-as-directory (expand-file-name d)))
 
@@ -93,9 +115,7 @@ or project.el root from there. Remote/TRAMP paths are handled."
          (escape (veb--ancestor-parent-of-component
                   dir '("working_dir" ".bender")))
          (base  (or escape dir))
-         ;; Prefer a .git at/above BASE (remote-safe).
          (git   (locate-dominating-file base ".git"))
-         ;; Fall back to project.el on BASE.
          (proj  (ignore-errors (project-current nil base)))
          (root  (or git (and proj (project-root proj)) base)))
     (veb--log "Project root -> %s  (escaped=%s  git=%s  proj=%s)"
@@ -113,7 +133,7 @@ or project.el root from there. Remote/TRAMP paths are handled."
   "Return list (PROGRAM ARGS...) for `eglot-server-programs`."
   (let* ((root   (veb--project-root))
          (fl     (veb--filelist-path root))
-         (fl-arg (veb--localname fl))          ;; <- strip /ssh:…:
+         (fl-arg (veb--localname fl))
          (cmd    (list veb-lsp-executable))
          (args   (copy-sequence veb-lsp-extra-args))
          (argv   (append cmd args (when (file-exists-p fl)
@@ -151,7 +171,8 @@ or project.el root from there. Remote/TRAMP paths are handled."
      (veb--log "eglot-ensure failed: %S" err)
      (signal (car err) (cdr err)))))
 
-;;;; Minor mode & hooks
+;;;; Minor mode & hooks --------------------------------------------------------
+;;;###autoload
 (define-minor-mode veb-project-mode
   "Keep file list up-to-date and Eglot configured."
   :lighter " VEB"
@@ -161,6 +182,7 @@ or project.el root from there. Remote/TRAMP paths are handled."
   (when veb-project-mode
     (veb-start-eglot-if-needed)))
 
+;;;###autoload
 (defun veb/on-verilog-buffer ()
   (veb--log "verilog buffer hook: %s (mode=%s)" (buffer-name) major-mode)
   (veb-project-mode 1))
@@ -169,7 +191,7 @@ or project.el root from there. Remote/TRAMP paths are handled."
 (defun veb--maybe-disable-fallback-remote ()
   (when (file-remote-p default-directory)
     (veb--log "Remote directory detected (%s) → disabling fallback" default-directory)
-    (setq veb-enable-fallback nil)))
+    (setq-local veb-enable-fallback nil)))
 
 (add-hook 'verilog-ts-mode-hook #'veb--maybe-disable-fallback-remote)
 (add-hook 'verilog-mode-hook    #'veb--maybe-disable-fallback-remote)

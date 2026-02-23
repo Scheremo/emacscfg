@@ -16,11 +16,30 @@
   (eldoc-echo-area-prefer-doc-buffer t)
   (eldoc-echo-area-use-multiline-p t))
 
+(defun my-camel-to-snake (s)
+  "Convert camelCase or PascalCase string S to snake_case."
+  (let ((case-fold-search nil)) ;; case-sensitive
+    (downcase
+     (replace-regexp-in-string
+      "\\([a-z0-9]\\)\\([A-Z]\\)" "\\1_\\2"
+      (replace-regexp-in-string
+       "\\([A-Z]+\\)\\([A-Z][a-z]\\)" "\\1_\\2" s)))))
+
+(defun my-eglot-camel-to-snake ()
+  "Rename the symbol at point from camelCase to snake_case using Eglot."
+  (interactive)
+  (let* ((sym (thing-at-point 'symbol t)))
+    (unless sym
+      (user-error "No symbol at point"))
+    (let ((snake (my-camel-to-snake sym)))
+      (eglot-rename snake))))
+
 (use-package eglot
   :hook ((python-mode . eglot-ensure)
          (verilog-mode . eglot-ensure)
          (rust-mode . eglot-ensure)
          (c-mode . eglot-ensure)
+         (c++-mode . eglot-ensure)
          (cmake-mode . eglot-ensure)
          )
   :bind (:map eglot-mode-map

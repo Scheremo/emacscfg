@@ -6,6 +6,8 @@
 (require 'treesit)
 
 (use-package verilog-ts-mode)
+(add-to-list 'load-path "~/.emacs.d/veb")
+(require 'verilog-eglot-bender)
 
 ;; Prefer verilog-ts-mode for Verilog / SystemVerilog sources
 (when (fboundp 'verilog-ts-mode)
@@ -16,12 +18,11 @@
   (dolist (pattern '("\\.v\\'" "\\.sv\\'" "\\.svh\\'"))
     (add-to-list 'auto-mode-alist (cons pattern 'verilog-ts-mode))))
 
-
 (use-package verilog-eglot-bender
-  :load-path "~/.emacs.d/veb"
-  :hook (verilog-ts-mode . veb/on-verilog-buffer)
+  :ensure nil
+  :hook ((verilog-ts-mode . veb/on-verilog-buffer)
+         (verilog-mode . veb/on-verilog-buffer))
   :custom
   (veb-filelist-name "target/slang/build/slang-flist-simulation.f")
   (veb-lsp-executable "circt-verilog-lsp-server")
-  (veb-debug 0)
-  )
+  (veb-debug 0))

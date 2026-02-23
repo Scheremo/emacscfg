@@ -85,7 +85,6 @@
 (setq custom-file (make-temp-name "/tmp/"))
 (setq custom-safe-themes t)
 
-(add-hook 'before-save-hook #'delete-trailing-whitespace)
 (setq require-final-newline t)
 
 (defalias 'view-emacs-news 'ignore)

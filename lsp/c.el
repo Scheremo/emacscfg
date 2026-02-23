@@ -7,11 +7,11 @@
                '((c-mode c++-mode)
                  . ("clangd"
                     "-j=8"
-                    "--query-driver=/opt/riscv/bin/riscv32-unknown-elf-gcc"
-                    "--log=error"
+                    "--log=verbose"
+                    "--pretty"
                     "--background-index"
-                    "--cross-file-rename"
                     "--completion-style=detailed"
                     "--pch-storage=memory"
-                    "--header-insertion=never"
-                    "--header-insertion-decorators=0"))))
+                    "--header-insertion-decorators"
+                    "--header-insertion=iwyu"
+                    "--query-driver=/opt/riscv/bin/riscv32-corev-elf-gcc, /opt/riscv/bin/riscv32-corev-elf-g++"))))
