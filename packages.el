@@ -1,22 +1,19 @@
 ;;; packages.el --- Moritz Scherer's Emacs setup.  -*- lexical-binding: t; -*-
 
-(use-package yaml-mode)
+(use-package yaml-mode
+  :mode "\\.ya?ml\\'")
 
 (use-package tree-sitter
-  :config (global-tree-sitter-mode))
+  :config (global-tree-sitter-mode 1))
 
-(use-package tree-sitter-langs)
+(use-package tree-sitter-langs :after tree-sitter)
 
-(let ((installed (package-installed-p 'all-the-icons)))
-  (use-package all-the-icons)
-  (unless installed (all-the-icons-install-fonts)))
+(use-package all-the-icons :defer t)
+;; Run M-x all-the-icons-install-fonts explicitly when setting up a new machine.
 
 (use-package all-the-icons-dired
-  :after all-the-icons
+  :if (display-graphic-p)
   :hook (dired-mode . all-the-icons-dired-mode))
-
-;; Let the OS determine what monospace means...
-(set-face-attribute 'default nil :font "monospace")
 
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
@@ -32,8 +29,8 @@
   :custom
   (cwm-centered-window-width 180))
 
-(use-package undo-tree)
-(global-undo-tree-mode)
+(use-package undo-tree
+  :config (global-undo-tree-mode 1))
 
 (use-package multiple-cursors
   :defer 1
@@ -42,7 +39,8 @@
 (use-package ws-butler
   :ensure t :hook (prog-mode . ws-butler-mode))
 
-(use-package magit)
+(use-package magit
+  :commands (magit-status magit-project-status))
 
 
 (use-package markdown-mode
@@ -58,7 +56,7 @@
   :vc (:url "https://github.com/pniedzielski/doxymacs.git"
             :rev :newest
             :lisp-dir "lisp/")
-  :hook (c-mode-common-hook . doxymacs-mode)
+  :hook (c-mode-common . doxymacs-mode)
   :bind (:map c-mode-base-map
               ;; Lookup documentation for the symbol at point.
               ("C-c d ?" . doxymacs-lookup)
@@ -80,18 +78,14 @@
               ;; Insert a grouping comments around the current region.
               ("C-c d @" . doxymacs-insert-grouping-comments)))
 
-(use-package cmake-mode)
 
 ;; (use-package direnv
 ;;   :config (direnv-mode)
 ;;   :custom (direnv-always-show-summary nil))
 
-(use-package dracula-theme)
+(use-package dracula-theme :defer t)
 (defun dracula()
   (interactive)
   (load-theme 'dracula t))
 
 (add-hook 'after-init-hook 'dracula)
-
-(add-to-list 'load-path "~/devel/axir/third_party/llvm-project/mlir/utils/emacs")
-(require 'mlir-mode)

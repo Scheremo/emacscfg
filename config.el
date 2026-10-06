@@ -2,11 +2,13 @@
 
 ;;; General purpose configuration
 
-(set-frame-font "monospace 16" nil t)
+(add-to-list 'default-frame-alist '(font . "monospace 16"))
+(when (display-graphic-p)
+  (set-frame-font "monospace 16" nil t))
 
-(setq gc-cons-threshold 100000000)
+(setq gc-cons-threshold (* 32 1024 1024))
 (setq max-specpdl-size 5000)
-(setq read-process-output-max (* 1024000 1024)) ;; 1mb
+(setq read-process-output-max (* 1024 1024)) ;; 1mb
 
 (setq
  ;; No need to see GNU agitprop.
@@ -70,8 +72,8 @@
 
 (delete-selection-mode t)
 (global-display-line-numbers-mode t)
-(column-number-mode)
-(savehist-mode)
+(column-number-mode 1)
+(savehist-mode 1)
 
 (require 'hl-line)
 (add-hook 'prog-mode-hook #'hl-line-mode)
@@ -113,8 +115,7 @@
 ;; (setopt tramp-remote-path '(tramp-own-remote-path))
 
 (use-package recentf
-  :pin gnu
-  :after dash
+  :ensure nil
   :init (pt/customize-tramp) ;; so that tramp urls work ok in recentf
   :custom
   ;; (recentf-exclude (-concat recentf-exclude '("\\elpa"
@@ -124,8 +125,8 @@
   ;;                                             )))
   (recentf-max-saved-items 50)
   (recentf-max-menu-items 30)
-  :config (recentf-mode))
+  :config (recentf-mode 1))
 
-(add-to-list 'auto-mode-alist '("\\.hjson\\'" . json-mode))
-(add-to-list 'auto-mode-alist '("\\.json\\'" . json-mode))
+(add-to-list 'auto-mode-alist '("\\.hjson\\'" . js-json-mode))
+(add-to-list 'auto-mode-alist '("\\.json\\'" . js-json-mode))
 (add-to-list 'auto-mode-alist '("\\.sdc\\'" . tcl-mode))

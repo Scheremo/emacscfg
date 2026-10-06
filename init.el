@@ -1,7 +1,7 @@
 ;;; init.el --- Moritz Scherer's Emacs setup.  -*- lexical-binding: t; -*-
 ;;
 ;;; Commentary:
-;; This file loads use-package, org-mode, and compiles and executes readme.org
+;; Activate packages and load the configuration modules.
 ;;
 ;;; Code:
 
@@ -12,33 +12,28 @@
   (tooltip-mode -1))
 
 (require 'package)
-;; Workaround the TLS problems with ELPA in older versions
-(unless '(version> emacs-version "29.0")
-  (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.3"))
-(unless (package-installed-p 'gnu-elpa-keyring-update)
-  (setq package-check-signature nil))
-(unless '(version> emacs-version "29.0")
-  (package-install 'gnu-elpa-keyring-update))
-
-(setq package-install-upgrade-built-in t)
-
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(add-to-list 'package-archives '("ublt" . "https://elpa.ubolonton.org/packages/") t)
-(add-to-list 'package-archives '("org" . "https://orgmode.org/elpa/") t) ; Org-mode's repository
-
+(setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+                         ("melpa" . "https://melpa.org/packages/")))
 (setq package-native-compile t)
-(setq use-package-always-ensure t)
 
-(package-initialize)
+;; nael-lsp's generated autoloads access nael-mode-map before loading Nael.
+;; Activate everything else first, so Nael sees the installed dependencies.
+(let ((package-load-list (cons '(nael-lsp nil) package-load-list)))
+  (package-initialize))
+(when (and (assq 'nael-lsp package-alist)
+           (or (equal (assq 'nael-lsp package-load-list) '(nael-lsp t))
+               (and (memq 'all package-load-list)
+                    (not (assq 'nael-lsp package-load-list)))))
+  (require 'nael)
+  (package-activate 'nael-lsp))
 
-(unless (package-installed-p 'use-package)
-  (message "refreshing contents")
+;; use-package is built into Emacs 29 and newer.
+(unless (require 'use-package nil t)
   (unless package-archive-contents (package-refresh-contents))
-  (package-install 'use-package))
-
-(eval-when-compile
-  (require 'use-package)
-  )
+  (package-install 'use-package)
+  (require 'use-package))
+(setq use-package-always-ensure t)
 
 (setq max-lisp-eval-depth 2000) 
 
@@ -50,8 +45,8 @@
         (t "~/.emacs.d/")))
 
 (defun load-user-file (file)
+  "Load FILE from the user configuration directory."
   (interactive "f")
-  "Load a file in current user's configuration directory"
   (load-file (expand-file-name file user-init-dir)))
 
 (load-user-file "bootstrap-straight.el")
@@ -62,7 +57,6 @@
 (load-user-file "lsp.el")
 (load-user-file "keybindings.el")
 (load-user-file "gpt.el")
-(load-user-file "llms/claude.el")
 
 
 (provide 'init)

@@ -9,6 +9,3 @@
 ;; Register cmake-language-server with Eglot
 (add-to-list 'eglot-server-programs
              '(cmake-mode . ("cmake-language-server")))
-
-;; Enable Eglot automatically for cmake-mode
-(add-hook 'cmake-mode-hook #'eglot-ensure)

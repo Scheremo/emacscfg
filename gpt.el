@@ -2,10 +2,8 @@
 
 (straight-use-package 'gptel)
 
-(gptel-make-ollama "Ollama"
-  :host "localhost:11434"
-  :stream t
-  :models '(phi4))
+(require 'gptel)
+(require 'gptel-ollama)
 
 ;; OPTIONAL configuration
 (setq

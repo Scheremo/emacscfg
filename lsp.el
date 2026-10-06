@@ -1,7 +1,7 @@
 ;;; lsp.el --- Moritz Scherer's Emacs setup.  -*- lexical-binding: t; -*-
 
 (use-package xref
-  :pin gnu
+  :ensure nil
   :custom (xref-auto-jump-to-first-xref t)
   :bind (("C-c q" . #'xref-find-definitions)
          ("C-c w" . #'xref-find-references)
@@ -9,7 +9,7 @@
          ("s-]" . #'xref-go-forward)))
 
 (use-package eldoc
-  :pin gnu
+  :ensure nil
   :diminish
   :bind ("s-d" . #'eldoc)
   :custom
@@ -34,14 +34,32 @@
     (let ((snake (my-camel-to-snake sym)))
       (eglot-rename snake))))
 
+(defun my-eglot-ensure ()
+  "Start a language server only when its executable is available."
+  (let ((program
+         (cond
+          ((derived-mode-p 'python-mode 'python-ts-mode) "pyright-langserver")
+          ((derived-mode-p 'c-mode 'c++-mode 'c-ts-mode 'c++-ts-mode) "clangd")
+          ((derived-mode-p 'verilog-mode 'verilog-ts-mode) "verible-verilog-ls")
+          ((derived-mode-p 'rust-mode 'rust-ts-mode) "rust-analyzer")
+          ((derived-mode-p 'cmake-mode 'cmake-ts-mode) "cmake-language-server")
+          ((eq major-mode 'mlir-mode) my-mlir-language-server))))
+    (when (and program (executable-find program t))
+      (eglot-ensure))))
+
 (use-package eglot
-  :hook ((python-mode . eglot-ensure)
-         (verilog-mode . eglot-ensure)
-         (rust-mode . eglot-ensure)
-         (c-mode . eglot-ensure)
-         (c++-mode . eglot-ensure)
-         (cmake-mode . eglot-ensure)
-         )
+  :ensure nil
+  :hook ((python-mode . my-eglot-ensure)
+         (python-ts-mode . my-eglot-ensure)
+         (verilog-mode . my-eglot-ensure)
+         (verilog-ts-mode . my-eglot-ensure)
+         (rust-mode . my-eglot-ensure)
+         (c-mode . my-eglot-ensure)
+         (c++-mode . my-eglot-ensure)
+         (c-ts-mode . my-eglot-ensure)
+         (c++-ts-mode . my-eglot-ensure)
+         (cmake-mode . my-eglot-ensure)
+         (mlir-mode . my-eglot-ensure))
   :bind (:map eglot-mode-map
          ("C-c q" . #'xref-find-definitions)
          ("C-c w" . #'xref-find-references)
@@ -50,14 +68,15 @@
          ("C-c C-l" . #'eglot-format-buffer)
          ("C-c C-r" . #'my-eglot-camel-to-snake))
   :custom
-  (eglot-confirm-server-initiated-edits nil)
+  (eglot-confirm-server-edits nil)
+  (eglot-events-buffer-config '(:size 0 :format full))
   (eglot-autoshutdown t)
   (eglot-send-changes-idle-time 0.1)
   )
 
-(fset #'jsonrpc--log-event #'ignore)
 
 (use-package flymake
+  :ensure nil
   :config
   (setq elisp-flymake-byte-compile-load-path load-path)
   :hook ((emacs-lisp-mode . flymake-mode)))
@@ -118,3 +137,10 @@ only if no conflicts with unsaved changes are detected."
 (load-user-file "lsp/cmake.el")
 (load-user-file "lsp/python.el")
 (load-user-file "lsp/lisp.el")
+(load-user-file "lsp/mlir.el")
+;; Register the input method without parsing its translation data at startup.
+(register-input-method "Lean" "UTF-8"
+                       (lambda (&rest _args)
+                         (load-user-file "lsp/lean.el")
+                         (quail-use-package "Lean"))
+                       "∏" "Lean mathematical symbols")
